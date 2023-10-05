@@ -4,22 +4,25 @@ const testing = std.testing;
 
 const KeySpan = std.ArrayList([]u8);
 
-fn readEnvFile(path: []u8, allocator: Allocator) !KeySpan {
+fn readEnvFile(path: []const u8, allocator: Allocator) !KeySpan {
     var file = try std.fs.cwd().openFile(path, .{});
     defer file.close();
 
-    var reader = std.io.bufferedReader(file.reader()).reader();
+    var buf = std.io.bufferedReader(file.reader());
+    var reader = buf.reader();
     var buffer = KeySpan.init(allocator);
     var keyspan = std.ArrayList(u8).init(allocator);
     defer keyspan.deinit();
 
     rall: while (true) {
         reader.streamUntilDelimiter(keyspan.writer(), '\n', null) catch |err| switch (err) {
-            .EndOfStream => {
+            error.EndOfStream => {
                 break :rall;
             },
             else => |e| return e,
         };
+
+        try buffer.append(try keyspan.toOwnedSlice());
     }
 
     return buffer;
@@ -57,4 +60,20 @@ pub fn load(allocator: Allocator) Dotenv {
 
 pub fn load_file(allocator: Allocator, path: []u8) Dotenv {
     return Dotenv(path).init(allocator);
+}
+
+test "readEnvFile happy path" {
+    const span = try readEnvFile(".env", std.testing.allocator);
+    defer {
+        for (span.items) |item| {
+            std.testing.allocator.free(item);
+        }
+        span.deinit();
+    }
+
+    //for (span.items) |item| {
+    //    std.debug.print("{s}", .{item});
+    //}
+
+    try std.testing.expectEqual(span.items.len, 2);
 }

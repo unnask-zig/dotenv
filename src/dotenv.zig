@@ -4,7 +4,16 @@ const testing = std.testing;
 
 const KeySpan = std.ArrayList([]u8);
 
-fn readEnvFile(path: []const u8, allocator: Allocator) !KeySpan {
+/// Loads a .env file for reading, returning an ArrayList([]u8) with
+/// one line per element.
+///
+/// @param - allocator - the allocator to use
+/// @param - path - relative path to the .env file
+///
+/// @return - errorsets - Allocator.Error, File.OpenError, Writer.Error
+///         - ArrayList of file lines
+///
+fn readEnvFile(allocator: Allocator, path: []const u8) !KeySpan {
     var file = try std.fs.cwd().openFile(path, .{});
     defer file.close();
 
@@ -28,47 +37,31 @@ fn readEnvFile(path: []const u8, allocator: Allocator) !KeySpan {
     return buffer;
 }
 
-pub fn Dotenv(comptime filepath: ?[]u8) type {
-    return struct {
-        const Self = @This();
-
-        filename: []u8,
-        allocator: Allocator,
-
-        pub fn init(allocator: Allocator) Self {
-            return Self{
-                .filename = filepath.?,
-                .allocator = allocator,
-            };
-        }
-
-        pub fn readEnv(self: *Self, path: []const u8) !void {
-            _ = path;
-            _ = self;
-        }
-
-        pub fn parse(self: *Self, text: []u8) !void {
-            _ = text;
-            _ = self;
-        }
-    };
+/// Deinitialize the ArrayList returned from readEnvFile
+fn deinit(allocator: Allocator, var_list: KeySpan) void {
+    for (var_list.items) |e| {
+        allocator.free(e);
+    }
+    var_list.deinit();
 }
 
-pub fn load(allocator: Allocator) Dotenv {
-    return Dotenv(null).init(allocator);
+pub const DefaultConfig = struct {
+    path: []const u8 = ".env",
+};
+
+pub fn load(allocator: Allocator) !void {
+    try load_conf(allocator, DefaultConfig{});
 }
 
-pub fn load_file(allocator: Allocator, path: []u8) Dotenv {
-    return Dotenv(path).init(allocator);
+pub fn load_conf(allocator: Allocator, comptime config: anytype) !void {
+    _ = config;
+    _ = allocator;
 }
 
 test "readEnvFile happy path" {
-    const span = try readEnvFile(".env", std.testing.allocator);
+    const span = try readEnvFile(std.testing.allocator, ".env");
     defer {
-        for (span.items) |item| {
-            std.testing.allocator.free(item);
-        }
-        span.deinit();
+        deinit(std.testing.allocator, span);
     }
 
     //for (span.items) |item| {

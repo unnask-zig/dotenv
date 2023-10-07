@@ -38,7 +38,7 @@ fn readEnvFile(allocator: Allocator, path: []const u8) !KeySpan {
 }
 
 /// Deinitialize the ArrayList returned from readEnvFile
-fn deinit(allocator: Allocator, var_list: KeySpan) void {
+fn deinitEnvList(allocator: Allocator, var_list: KeySpan) void {
     for (var_list.items) |e| {
         allocator.free(e);
     }
@@ -61,7 +61,7 @@ pub fn load_conf(allocator: Allocator, comptime config: anytype) !void {
 test "readEnvFile happy path" {
     const span = try readEnvFile(std.testing.allocator, ".env");
     defer {
-        deinit(std.testing.allocator, span);
+        deinitEnvList(std.testing.allocator, span);
     }
 
     //for (span.items) |item| {

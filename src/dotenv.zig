@@ -3,7 +3,7 @@ const Allocator = std.mem.Allocator;
 const testing = std.testing;
 const EnvMap = std.process.EnvMap;
 
-const KVPairsSpan = std.ArrayList([]u8);
+const KVPairsSpan = std.ArrayList([]const u8);
 
 /// Loads a .env file for reading, returning an ArrayList([]u8) with
 /// one line per element.
@@ -46,16 +46,24 @@ fn deinitKVEnvSpan(allocator: Allocator, var_list: KVPairsSpan) void {
     var_list.deinit();
 }
 
-fn parseEnvFile(pairs: KVPairsSpan, env: *EnvMap) void {
+/// Parse the env file entries and add them to the EnvMap.
+///
+/// @param - pairs - the loaded .env file
+/// @param - env - the EnvMap to add the key value pairs to
+/// @return - errorsets - Allocator.error, Reader.error
+fn parseEnvFile(pairs: *KVPairsSpan, env: *EnvMap) !void {
     for (pairs.items) |e| {
         var stream = std.io.fixedBufferStream(e);
         var reader = stream.reader();
 
         try reader.skipUntilDelimiterOrEof('=');
-        var key = e[0..stream.getPos()];
-        var value = e[stream.getPos()..];
+        const tmpPos = try stream.getPos();
+        const pos = std.math.cast(usize, tmpPos) orelse e.len;
 
-        env.put(key, value);
+        var key = e[0 .. pos - 1];
+        var value = e[pos..];
+
+        try env.put(key, value);
     }
 }
 
@@ -84,4 +92,27 @@ test "readEnvFile happy path" {
     //}
 
     try std.testing.expectEqual(span.items.len, 2);
+}
+
+test "parseEnvFile happy path" {
+    var env = try std.process.getEnvMap(std.testing.allocator);
+    defer env.deinit();
+
+    var tst = KVPairsSpan.init(std.testing.allocator);
+    defer tst.deinit();
+
+    try tst.append("test=var");
+    try tst.append("test2=var2");
+
+    try parseEnvFile(&tst, &env);
+
+    //var iter = env.iterator();
+    //while (iter.next()) |e| {
+    //    std.debug.print("{s}={s}\n", .{ e.key_ptr.*, e.value_ptr.* });
+    //}
+
+    try std.testing.expect(env.get("test") != null);
+    try std.testing.expect(env.get("test2") != null);
+    try std.testing.expectEqualStrings(env.get("test").?, "var");
+    try std.testing.expectEqualStrings(env.get("test2").?, "var2");
 }

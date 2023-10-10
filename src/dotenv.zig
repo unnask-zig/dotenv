@@ -21,6 +21,7 @@ fn initKVPairsSpan(allocator: Allocator, path: []const u8) !KVPairsSpan {
     var buf = std.io.bufferedReader(file.reader());
     var reader = buf.reader();
     var spans = KVPairsSpan.init(allocator);
+    errdefer spans.deinit();
     var kvspan = std.ArrayList(u8).init(allocator);
     defer kvspan.deinit();
 
@@ -80,8 +81,18 @@ pub fn load(allocator: Allocator) !EnvMap {
 }
 
 pub fn load_conf(allocator: Allocator, comptime config: anytype) !EnvMap {
+    //todo - parse a custom connfig struct
     _ = config;
-    _ = allocator;
+
+    const conf = DefaultConfig{};
+
+    //todo - this cannot be a try
+    const dotenv = try initKVPairsSpan(allocator, conf.path);
+
+    var env = std.process.getEnvMap(allocator);
+    parseEnvFile(&dotenv, &env, conf.override);
+
+    return env;
 }
 
 test "readEnvFile happy path" {

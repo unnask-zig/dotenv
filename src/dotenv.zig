@@ -50,8 +50,9 @@ fn deinitKVEnvSpan(allocator: Allocator, var_list: KVPairsSpan) void {
 ///
 /// @param - pairs - the loaded .env file
 /// @param - env - the EnvMap to add the key value pairs to
+/// @param - override - whether to override an existing key or not
 /// @return - errorsets - Allocator.error, Reader.error
-fn parseEnvFile(pairs: *KVPairsSpan, env: *EnvMap) !void {
+fn parseEnvFile(pairs: *KVPairsSpan, env: *EnvMap, override: bool) !void {
     for (pairs.items) |e| {
         var stream = std.io.fixedBufferStream(e);
         var reader = stream.reader();
@@ -63,7 +64,9 @@ fn parseEnvFile(pairs: *KVPairsSpan, env: *EnvMap) !void {
         var key = e[0 .. pos - 1];
         var value = e[pos..];
 
-        try env.put(key, value);
+        if (override or (!override and !env.hash_map.contains(key))) {
+            try env.put(key, value);
+        }
     }
 }
 
@@ -104,7 +107,7 @@ test "parseEnvFile happy path" {
     try tst.append("test=var");
     try tst.append("test2=var2");
 
-    try parseEnvFile(&tst, &env);
+    try parseEnvFile(&tst, &env, false);
 
     //var iter = env.iterator();
     //while (iter.next()) |e| {

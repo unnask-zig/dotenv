@@ -82,7 +82,25 @@ pub fn load(allocator: Allocator) !EnvMap {
 
 pub fn load_conf(allocator: Allocator, comptime config: anytype) !EnvMap {
     //todo - parse a custom connfig struct
-    _ = config;
+
+    comptime {
+        const tp = @TypeOf(config);
+        switch (@typeInfo(tp)) {
+            .Struct => |struct_info| {
+                for (struct_info.fields) |field| {
+
+                    //todo: i wonder if maybe this is worse. maybe just check for the relevant
+                    //fields existing.
+                    //that way any struct providing the fields works
+
+                    if (!@hasField(@TypeOf(DefaultConfig), field)) {
+                        @compileError("");
+                    }
+                }
+            },
+            else => @compileError("load_conf expects a struct for config"),
+        }
+    }
 
     const conf = DefaultConfig{};
 

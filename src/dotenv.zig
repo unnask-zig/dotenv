@@ -89,26 +89,28 @@ pub fn load_conf(allocator: Allocator, comptime config: anytype) !EnvMap {
             .Struct => |struct_info| {
                 for (struct_info.fields) |field| {
 
-                    //todo: i wonder if maybe this is worse. maybe just check for the relevant
+                    //i wonder if maybe this is worse. maybe just check for the relevant
                     //fields existing.
                     //that way any struct providing the fields works
+                    //on the other side, this is probably fine and prevents any typos
 
-                    if (!@hasField(@TypeOf(DefaultConfig), field)) {
-                        @compileError("");
+                    if (!@hasField(DefaultConfig, field.name)) {
+                        @compileError("Dotenv conf supports fields path: []const u8 and override: bool\n");
                     }
                 }
             },
-            else => @compileError("load_conf expects a struct for config"),
+            else => @compileError("load_conf expects a struct for config\n"),
         }
     }
 
     const conf = DefaultConfig{};
 
     //todo - this cannot be a try
-    const dotenv = try initKVPairsSpan(allocator, conf.path);
+    var dotenv = try initKVPairsSpan(allocator, conf.path);
+    defer deinitKVEnvSpan(allocator, dotenv);
 
-    var env = std.process.getEnvMap(allocator);
-    parseEnvFile(&dotenv, &env, conf.override);
+    var env = try std.process.getEnvMap(allocator);
+    try parseEnvFile(&dotenv, &env, conf.override);
 
     return env;
 }
@@ -147,4 +149,11 @@ test "parseEnvFile happy path" {
     try std.testing.expect(env.get("test2") != null);
     try std.testing.expectEqualStrings(env.get("test").?, "var");
     try std.testing.expectEqualStrings(env.get("test2").?, "var2");
+}
+
+test "load_conf" {
+    //compiler error:
+    //var env = try load_conf(std.testing.allocator, .{ .parth = ".env" });
+    var env = try load_conf(std.testing.allocator, .{ .path = ".env" });
+    env.deinit();
 }

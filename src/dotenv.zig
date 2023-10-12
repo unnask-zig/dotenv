@@ -104,6 +104,7 @@ pub fn load_conf(allocator: Allocator, comptime config: anytype) !EnvMap {
     }
 
     const conf = DefaultConfig{};
+    //todo - override when fields exist in config variable
 
     //todo - this cannot be a try
     var dotenv = try initKVPairsSpan(allocator, conf.path);

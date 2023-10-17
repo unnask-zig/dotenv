@@ -53,7 +53,7 @@ fn deinitKVEnvSpan(allocator: Allocator, var_list: KVPairsSpan) void {
 /// @param - env - the EnvMap to add the key value pairs to
 /// @param - override - whether to override an existing key or not
 /// @return - errorsets - Allocator.error, Reader.error
-fn parseEnvFile(pairs: *KVPairsSpan, env: *EnvMap, override: bool) !void {
+fn parseEnvFile(pairs: *const KVPairsSpan, env: *EnvMap, override: bool) !void {
     for (pairs.items) |e| {
         var stream = std.io.fixedBufferStream(e);
         var reader = stream.reader();
@@ -81,8 +81,6 @@ pub fn load(allocator: Allocator) !EnvMap {
 }
 
 pub fn load_conf(allocator: Allocator, comptime config: anytype) !EnvMap {
-    //todo - parse a custom connfig struct
-
     comptime {
         const tp = @TypeOf(config);
         switch (@typeInfo(tp)) {
@@ -103,15 +101,25 @@ pub fn load_conf(allocator: Allocator, comptime config: anytype) !EnvMap {
         }
     }
 
-    const conf = DefaultConfig{};
-    //todo - override when fields exist in config variable
-
-    //todo - this cannot be a try
-    var dotenv = try initKVPairsSpan(allocator, conf.path);
-    defer deinitKVEnvSpan(allocator, dotenv);
+    var conf = DefaultConfig{};
+    if (@hasField(@TypeOf(config), "path")) {
+        conf.path = config.path;
+    }
+    if (@hasField(@TypeOf(config), "override")) {
+        conf.override = config.override;
+    }
 
     var env = try std.process.getEnvMap(allocator);
-    try parseEnvFile(&dotenv, &env, conf.override);
+    errdefer env.deinit();
+
+    var dotenv = initKVPairsSpan(allocator, conf.path);
+    if (dotenv) |*denv| {
+        defer deinitKVEnvSpan(allocator, denv.*);
+        try parseEnvFile(denv, &env, conf.override);
+    } else |err| switch (err) {
+        error.FileNotFound => {},
+        else => |e| return e,
+    }
 
     return env;
 }
@@ -152,9 +160,17 @@ test "parseEnvFile happy path" {
     try std.testing.expectEqualStrings(env.get("test2").?, "var2");
 }
 
-test "load_conf" {
+test "load_conf happy path" {
     //compiler error:
     //var env = try load_conf(std.testing.allocator, .{ .parth = ".env" });
     var env = try load_conf(std.testing.allocator, .{ .path = ".env" });
     env.deinit();
+}
+
+test "load_conf file does not exist" {
+    var env = try load_conf(std.testing.allocator, .{ .path = "file.env" });
+    env.deinit();
+    // env should
+    try std.testing.expect(env.hash_map.count() > 0);
+    //
 }

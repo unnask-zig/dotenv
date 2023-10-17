@@ -5,6 +5,9 @@ const EnvMap = std.process.EnvMap;
 
 const KVPairsSpan = std.ArrayList([]const u8);
 
+//todo: this doc format sucks ass. zig doesnt really specify one. There's
+//probably a better way
+
 /// Loads a .env file for reading, returning an ArrayList([]u8) with
 /// one line per element.
 ///
@@ -76,11 +79,31 @@ pub const DefaultConfig = struct {
     override: bool = false,
 };
 
+/// Gets the environment and attempts to add user defined env vars with a
+/// default config.
+/// If the given env file is not found, then this function is equivalent to
+/// calling std.process.getEnvMap(allocator)
+/// In the default config:
+///     .path = ".env"
+///     .override = "false"
+/// @param - allocator - the allocator to use
+///         note that it will be used multiple times (reading a file, getting env)
+/// @return - std.process.EnvMap - caller owns and must call .deinit()
 pub fn load(allocator: Allocator) !EnvMap {
     try load_conf(allocator, DefaultConfig{});
 }
 
-pub fn load_conf(allocator: Allocator, comptime config: anytype) !EnvMap {
+/// Gets the environment and attempts to add user defined env vars with a
+/// with a user provided config.
+/// If the given env file is not found, then this function is equivalent to
+/// calling std.process.getEnvMap(allocator)
+/// @param - allocator - the allocator to use
+///         note that it will be used multiple times (reading a file, getting env)
+/// @param - config - anytype struct that can contain any of the following fields:
+///         path: []const u8    - path to the env file
+///         override: bool      - whether to override values in EnvMap with those in the env file
+/// @return - std.process.EnvMap - caller owns and must call .deinit()
+pub fn load_conf(allocator: Allocator, config: anytype) !EnvMap {
     comptime {
         const tp = @TypeOf(config);
         switch (@typeInfo(tp)) {
@@ -170,7 +193,9 @@ test "load_conf happy path" {
 test "load_conf file does not exist" {
     var env = try load_conf(std.testing.allocator, .{ .path = "file.env" });
     env.deinit();
-    // env should
+    // env should normally have variables even with a file that doesn't exist
+    // I suppose the test could make sure the file doesn't exist, but oh well.
     try std.testing.expect(env.hash_map.count() > 0);
-    //
+
+    // todo: maybe compare with std.process.EnvMap
 }

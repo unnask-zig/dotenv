@@ -2,7 +2,7 @@ const std = @import("std");
 const Allocator = std.mem.Allocator;
 const EnvMap = std.process.EnvMap;
 
-fn readFile(allocator: Allocator, path: []const u8) !void {
+fn readFile(allocator: Allocator, path: []const u8) ![]const u8 {
     var file = try std.fs.cwd().openFile(path, .{});
     defer file.close();
 

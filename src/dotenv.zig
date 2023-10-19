@@ -42,4 +42,10 @@ test "parse happy path" {
     ;
 
     try parse(bytes, &envmap, false);
+
+    try std.testing.expect(envmap.hash_map.contains("test"));
+    try std.testing.expect(envmap.hash_map.contains("vart"));
+
+    try std.testing.expectEqualStrings(envmap.get("test").?, "var1");
+    try std.testing.expectEqualStrings(envmap.get("vart").?, "test1");
 }

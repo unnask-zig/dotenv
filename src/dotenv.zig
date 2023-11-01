@@ -2,20 +2,19 @@ const std = @import("std");
 const Allocator = std.mem.Allocator;
 const EnvMap = std.process.EnvMap;
 
-const whitespace = [_]u8{
-    0x09, // horizontal tab
-    0x0a, // line feed
-    0x0b, // vertical tab
-    0x0c, // form feed
-    0x0d, // carriage return
-    0x20, // space
-    0x85, // next line
-    0xA0, // no-break space
-};
+const whitespace_bytes = [_]u8{
+    // ASCII + UTF-8 supported whitespace
+    0x09, // U+0009 horizontal tab
+    0x0a, // U+000A line feed
+    0x0b, // U+000B vertical tab
+    0x0c, // U+000C form feed
+    0x0d, // U+000D carriage return
+    0x20, // U+0020 space
+    0x85, // U+0085 next line
+    0xA0, // U+00A0 no-break space
 
-const whitespace_mb = [_]u8{
+    // UNICODE/UTF-8 multibyte characters marked as whitespace
     0xe1, 0x9a, 0x80, // U+1680 ogham space mark
-    0xe1, 0xa0, 0x8e, // U+180E mongolian vowel separator
     0xe2, 0x80, 0x80, // U+2000 en quad
     0xe2, 0x80, 0x81, // U+2001 em quad
     0xe2, 0x80, 0x82, // U+2002 en space
@@ -27,17 +26,23 @@ const whitespace_mb = [_]u8{
     0xe2, 0x80, 0x88, // U+2008 punctuation space
     0xe2, 0x80, 0x89, // U+2009 thin space
     0xe2, 0x80, 0x8a, // U+200A hair space
-    0xe2, 0x80, 0x8b, // U+200B zero width space
-    0xe2, 0x80, 0x8c, // U+200C zero width non-joiner
-    0xe2, 0x80, 0x8d, // U+200D zero width joiner
     0xe2, 0x80, 0xa8, // U+2028 line separator
     0xe2, 0x80, 0xa9, // U+2029 paragraph separator
     0xe2, 0x80, 0xaf, // U+202F narrow no-break space
     0xe2, 0x81, 0x9f, // U+205F medium mathematical space
-    0xe2, 0x81, 0xa0, // U+2060 word joiner
     0xe3, 0x80, 0x80, // U+3000 ideographic space
+
+    // Not marked whitespace but may be used or it
+    0xe1, 0xa0, 0x8e, // U+180E mongolian vowel separator
+    0xe2, 0x80, 0x8b, // U+200B zero width space
+    0xe2, 0x80, 0x8c, // U+200C zero width non-joiner
+    0xe2, 0x80, 0x8d, // U+200D zero width joiner
+    0xe2, 0x81, 0xa0, // U+2060 word joiner
     0xef, 0xbb, 0xbf, // U+FEFF zero width non-breaking space
 };
+
+const single_bytes = whitespace_bytes[0..8];
+const multi_bytes = whitespace_bytes[8..74];
 
 fn trim(value: []const u8) []const u8 {
     if (value.len == 0) {

@@ -42,16 +42,67 @@ const whitespace_bytes = [_]u8{
 };
 
 const single_bytes = whitespace_bytes[0..8];
-const multi_bytes = whitespace_bytes[8..74];
+const multi_bytes = whitespace_bytes[8..77];
 
-fn trim(value: []const u8) []const u8 {
+fn findSingleByteWhitespace(byte: u8) bool {
+    comptime var i: usize = 0;
+
+    inline while (i < single_bytes.len) : (i += 1) {
+        if (byte == single_bytes[i]) {
+            return true;
+        }
+    }
+
+    return false;
+}
+
+fn findMultibyteWhitespace(scalar: []const u8) bool {
+    comptime var i: usize = 0;
+
+    inline while (i < multi_bytes.len) : (i += 3) {
+        const whitespace = multi_bytes[i..][0..3];
+        if (std.mem.eql(u8, scalar, whitespace)) {
+            return true;
+        }
+    }
+
+    return false;
+}
+
+fn ltrim(value: []const u8) []const u8 {
     if (value.len == 0) {
         return value;
     }
 
-    //todo actually write it
+    var idx: usize = 0;
+    while (idx < value.len) {
+        // Fortunately, all the UTF-8 multibyte whitespace are all 3 bytes,
+        // so we can just look for this one condition, and otherwise check
+        // for the single byte
+        if (value[idx] & 0xf0 == 0xe0) {
+            if (findMultibyteWhitespace(value[idx..][0..3])) {
+                idx += 3;
+                continue;
+            }
+            break;
+        } else {
+            if (findSingleByteWhitespace(value[idx])) {
+                idx += 1;
+                continue;
+            }
+            break;
+        }
+    }
 
+    return value[idx..];
+}
+
+fn rtrim(value: []const u8) []const u8 {
     return value;
+}
+
+fn trim(value: []const u8) []const u8 {
+    return ltrim(rtrim(value));
 }
 
 fn readFile(allocator: Allocator, path: []const u8) ![]const u8 {

@@ -103,3 +103,10 @@ pub fn rtrim(value: []const u8) []const u8 {
 pub fn trim(value: []const u8) []const u8 {
     return ltrim(rtrim(value));
 }
+
+test "ltrim ascii spaces" {
+    var str = "     hello world   ";
+    var cmp = ltrim(str);
+
+    try std.testing.expectEqualStrings("hello world   ", cmp);
+}

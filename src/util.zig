@@ -78,6 +78,11 @@ pub fn ltrim(value: []const u8) []const u8 {
         // so we can just look for this one condition, and otherwise check
         // for the single byte
         if (value[idx] & 0xf0 == 0xe0) {
+            //probably not an exploitable boundary even with a specially
+            //crafted string but there's a small chance of causing a crash.
+            //if (value.len - idx - 3 < 0) {
+            //    break;
+            //}
             if (findMultibyteWhitespace(value[idx..][0..3])) {
                 idx += 3;
                 continue;
@@ -114,6 +119,20 @@ test "ltrim ascii spaces" {
 test "ltrim multibyte characters" {
     var str = "             　fr";
     var cmp = ltrim(str);
+
+    try std.testing.expectEqualStrings("fr", cmp);
+}
+
+test "rtrim ascii spaces" {
+    var str = "     hello world   ";
+    var cmp = rtrim(str);
+
+    try std.testing.expectEqualStrings("    hello world", cmp);
+}
+
+test "rtrim multibyte characters" {
+    var str = "fr             　";
+    var cmp = rtrim(str);
 
     try std.testing.expectEqualStrings("fr", cmp);
 }

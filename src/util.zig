@@ -110,3 +110,10 @@ test "ltrim ascii spaces" {
 
     try std.testing.expectEqualStrings("hello world   ", cmp);
 }
+
+test "ltrim multibyte characters" {
+    var str = "             　fr";
+    var cmp = ltrim(str);
+
+    try std.testing.expectEqualStrings("fr", cmp);
+}

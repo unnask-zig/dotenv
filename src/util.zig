@@ -101,8 +101,34 @@ pub fn ltrim(value: []const u8) []const u8 {
 }
 
 pub fn rtrim(value: []const u8) []const u8 {
-    //todo write me
-    return value;
+    if (value.len == 0) {
+        return value;
+    }
+
+    //initially, i figured just do the single byte, then multibyte, but that
+    //wont work. will need to do them both at the same time
+    var idx: usize = value.len - 1;
+
+    //todo: this is busted for an all space string!
+    while (idx >= 0) {
+        // continuation bytes are 0b10xxxxxx
+        // so and with 0b11000000 to be sure of those two bits
+        if (value[idx] & 0xc0 == 0x80) {
+            if (findMultibyteWhitespace(value[idx - 2 ..][0..3])) {
+                idx -= 3;
+                continue;
+            }
+            break;
+        } else {
+            if (findSingleByteWhitespace(value[idx])) {
+                idx -= 1;
+                continue;
+            }
+            break;
+        }
+    }
+
+    return value[0 .. idx + 1];
 }
 
 pub fn trim(value: []const u8) []const u8 {
@@ -124,7 +150,7 @@ test "ltrim multibyte characters" {
 }
 
 test "rtrim ascii spaces" {
-    var str = "     hello world   ";
+    var str = "    hello world   ";
     var cmp = rtrim(str);
 
     try std.testing.expectEqualStrings("    hello world", cmp);
@@ -135,4 +161,11 @@ test "rtrim multibyte characters" {
     var cmp = rtrim(str);
 
     try std.testing.expectEqualStrings("fr", cmp);
+}
+
+test "rtrim all ascii spaces" {
+    var str = "    ";
+    var cmp = rtrim(str);
+
+    try std.testing.expectEqualStrings("", cmp);
 }

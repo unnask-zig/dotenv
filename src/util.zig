@@ -42,7 +42,7 @@ const whitespace_bytes = [_]u8{
 const single_bytes = whitespace_bytes[0..8];
 const multi_bytes = whitespace_bytes[8..77];
 
-fn findSingleByteWhitespace(byte: u8) bool {
+fn issbspace(byte: u8) bool {
     comptime var i: usize = 0;
 
     inline while (i < single_bytes.len) : (i += 1) {
@@ -54,7 +54,7 @@ fn findSingleByteWhitespace(byte: u8) bool {
     return false;
 }
 
-fn findMultibyteWhitespace(scalar: []const u8) bool {
+fn ismbspace(scalar: []const u8) bool {
     comptime var i: usize = 0;
 
     inline while (i < multi_bytes.len) : (i += 3) {
@@ -83,13 +83,13 @@ pub fn ltrim(value: []const u8) []const u8 {
             //if (value.len - idx - 3 < 0) {
             //    break;
             //}
-            if (findMultibyteWhitespace(value[idx..][0..3])) {
+            if (ismbspace(value[idx..][0..3])) {
                 idx += 3;
                 continue;
             }
             break;
         } else {
-            if (findSingleByteWhitespace(value[idx])) {
+            if (issbspace(value[idx])) {
                 idx += 1;
                 continue;
             }
@@ -114,13 +114,13 @@ pub fn rtrim(value: []const u8) []const u8 {
         // continuation bytes are 0b10xxxxxx
         // so and with 0b11000000 to be sure of those two bits
         if (value[idx] & 0xc0 == 0x80) {
-            if (findMultibyteWhitespace(value[idx - 2 ..][0..3])) {
+            if (ismbspace(value[idx - 2 ..][0..3])) {
                 idx -= 3;
                 continue;
             }
             break;
         } else {
-            if (findSingleByteWhitespace(value[idx])) {
+            if (issbspace(value[idx])) {
                 idx -= 1;
                 continue;
             }

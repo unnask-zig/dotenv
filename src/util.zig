@@ -105,34 +105,39 @@ pub fn rtrim(value: []const u8) []const u8 {
         return value;
     }
 
-    //initially, i figured just do the single byte, then multibyte, but that
-    //wont work. will need to do them both at the same time
-    var idx: usize = value.len - 1;
+    var slice = value;
 
-    //todo: this is busted for an all space string!
-    while (idx >= 0) {
-        // continuation bytes are 0b10xxxxxx
-        // so and with 0b11000000 to be sure of those two bits
-        if (value[idx] & 0xc0 == 0x80) {
-            if (ismbspace(value[idx - 2 ..][0..3])) {
-                idx -= 3;
-                continue;
+    while (slice.len > 0) {
+        //continuation bytes are 0b10xxxxxx, so we should isolate these
+        //bits with 0b11000000
+        var idx = slice.len - 1;
+        if (slice[idx] & 0xc0 == 0x80) {
+            //multibyte value
+            if (slice.len < 3 or !ismbspace(slice[idx - 2 ..][0..3])) {
+                break;
             }
-            break;
+            slice = slice[0 .. idx - 2];
         } else {
-            if (issbspace(value[idx])) {
-                idx -= 1;
-                continue;
+            //single byte value
+            if (!issbspace(slice[idx])) {
+                break;
             }
-            break;
+            slice = slice[0..idx];
         }
     }
 
-    return value[0 .. idx + 1];
+    return slice;
 }
 
 pub fn trim(value: []const u8) []const u8 {
     return ltrim(rtrim(value));
+}
+
+test "basic trim" {
+    var str = "   hello world    ";
+    var cmp = trim(str);
+
+    try std.testing.expectEqualStrings("hello world", cmp);
 }
 
 test "ltrim ascii spaces" {
@@ -149,6 +154,20 @@ test "ltrim multibyte characters" {
     try std.testing.expectEqualStrings("fr", cmp);
 }
 
+test "ltrim only multibyte characters" {
+    var str = "             　";
+    var cmp = ltrim(str);
+
+    try std.testing.expectEqualStrings("", cmp);
+}
+
+test "ltrim only ascii spaces" {
+    var str = "    ";
+    var cmp = ltrim(str);
+
+    try std.testing.expectEqualStrings("", cmp);
+}
+
 test "rtrim ascii spaces" {
     var str = "    hello world   ";
     var cmp = rtrim(str);
@@ -163,7 +182,14 @@ test "rtrim multibyte characters" {
     try std.testing.expectEqualStrings("fr", cmp);
 }
 
-test "rtrim all ascii spaces" {
+test "rtrim only multibyte characters" {
+    var str = "             　";
+    var cmp = rtrim(str);
+
+    try std.testing.expectEqualStrings("", cmp);
+}
+
+test "rtrim only ascii spaces" {
     var str = "    ";
     var cmp = rtrim(str);
 

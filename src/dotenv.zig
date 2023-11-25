@@ -109,6 +109,7 @@ test "parse line without value" {
 
     try parse(bytes, &envmap, false);
     try std.testing.expect(envmap.hash_map.contains("test"));
+    try std.testing.expect(envmap.hash_map.contains("vart"));
     try std.testing.expectEqualStrings(envmap.get("test").?, "");
     try std.testing.expectEqualStrings(envmap.get("vart").?, "test");
 }

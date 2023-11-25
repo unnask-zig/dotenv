@@ -1,7 +1,7 @@
 const std = @import("std");
 const Allocator = std.mem.Allocator;
 const EnvMap = std.process.EnvMap;
-const trim = @import("util.zig").trim;
+const trim = @import("trim.zig").trim;
 
 fn readFile(allocator: Allocator, path: []const u8) ![]const u8 {
     var file = try std.fs.cwd().openFile(path, .{});
@@ -30,7 +30,10 @@ fn parse(bytes: []const u8, env: *EnvMap, override: bool) !void {
         }
 
         const key = next(line, '=');
-        const value = next(line[key.len + 1 ..], '\n');
+        var value: []const u8 = "";
+        if (line.len > key.len) {
+            value = next(line[key.len + 1 ..], '\n');
+        }
 
         if (!env.hash_map.contains(key) or override) {
             try env.put(key, value);
@@ -91,5 +94,21 @@ test "parse empty line w/ whitespace" {
     try std.testing.expect(envmap.hash_map.contains("vart"));
 
     try std.testing.expectEqualStrings(envmap.get("test").?, "var1");
+    try std.testing.expectEqualStrings(envmap.get("vart").?, "test");
+}
+
+test "parse line without value" {
+    var envmap = EnvMap.init(std.testing.allocator);
+    defer envmap.deinit();
+
+    var bytes =
+        \\test
+        \\
+        \\vart=test
+    ;
+
+    try parse(bytes, &envmap, false);
+    try std.testing.expect(envmap.hash_map.contains("test"));
+    try std.testing.expectEqualStrings(envmap.get("test").?, "");
     try std.testing.expectEqualStrings(envmap.get("vart").?, "test");
 }

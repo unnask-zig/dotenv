@@ -15,19 +15,31 @@ pub fn build(b: *std.Build) void {
     // set a preferred release mode, allowing the user to decide how to optimize.
     const optimize = b.standardOptimizeOption(.{});
 
-    const lib = b.addStaticLibrary(.{
-        .name = "dotenv",
-        // In this case the main source file is merely a path, however, in more
-        // complicated build scripts, this could be a generated file.
-        .root_source_file = .{ .path = "src/dotenv.zig" },
+    //const lib = b.addStaticLibrary(.{
+    //    .name = "dotenv",
+    //    // In this case the main source file is merely a path, however, in more
+    //    // complicated build scripts, this could be a generated file.
+    //    .root_source_file = .{ .path = "src/dotenv.zig" },
+    //    .target = target,
+    //    .optimize = optimize,
+    //});
+
+    const trimstr_dep = b.dependency("trimstr", .{
         .target = target,
         .optimize = optimize,
+    });
+
+    const module = b.addModule("dotenv", .{
+        .source_file = .{ .path = "src/dotenv.zig" },
+        .dependencies = &.{
+            .{ .name = "trimstr", .module = trimstr_dep.module("trimstr") },
+        },
     });
 
     // This declares intent for the library to be installed into the standard
     // location when the user invokes the "install" step (the default step when
     // running `zig build`).
-    b.installArtifact(lib);
+    //b.installArtifact(lib);
 
     // Creates a step for unit testing. This only builds the test executable
     // but does not run it.
@@ -36,6 +48,11 @@ pub fn build(b: *std.Build) void {
         .target = target,
         .optimize = optimize,
     });
+    var dep_iter = module.dependencies.iterator();
+    while (dep_iter.next()) |e| {
+        main_tests.addModule(e.key_ptr.*, e.value_ptr.*);
+    }
+    //main_tests.addModule("trimstr", trimstr_dep.module("trimstr"));
 
     const run_main_tests = b.addRunArtifact(main_tests);
 

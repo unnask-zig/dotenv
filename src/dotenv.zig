@@ -1,7 +1,7 @@
 const std = @import("std");
 const Allocator = std.mem.Allocator;
 const EnvMap = std.process.EnvMap;
-const trim = @import("trim.zig").trim;
+const trim = @import("trimstr").trim;
 
 fn readFile(allocator: Allocator, path: []const u8) ![]const u8 {
     var file = try std.fs.cwd().openFile(path, .{});

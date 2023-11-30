@@ -3,16 +3,6 @@ const Allocator = std.mem.Allocator;
 const EnvMap = std.process.EnvMap;
 const trim = @import("trimstr").trim;
 
-fn readFile(allocator: Allocator, path: []const u8) ![]const u8 {
-    var file = try std.fs.cwd().openFile(path, .{});
-    defer file.close();
-
-    var fsz = (try file.stat()).size;
-    var br = std.io.bufferedReader(file.reader());
-    var reader = br.reader();
-    return try reader.readAllAlloc(allocator, fsz);
-}
-
 inline fn next(bytes: []const u8, delimiter: u8) []const u8 {
     const pos = std.mem.indexOfPos(u8, bytes, 0, &[_]u8{delimiter}) orelse bytes.len;
     return bytes[0..pos];
@@ -39,6 +29,29 @@ fn parse(bytes: []const u8, env: *EnvMap, override: bool) !void {
             try env.put(key, value);
         }
     }
+}
+
+fn readFile(allocator: Allocator, path: []const u8) ![]const u8 {
+    var file = try std.fs.cwd().openFile(path, .{});
+    defer file.close();
+
+    var fsz = (try file.stat()).size;
+    var br = std.io.bufferedReader(file.reader());
+    var reader = br.reader();
+    return try reader.readAllAlloc(allocator, fsz);
+}
+
+const Config = struct {};
+
+pub fn dotenvconf(allocator: Allocator, conf: anyopaque) EnvMap {
+    _ = conf;
+    var map = EnvMap.init(allocator);
+
+    return map;
+}
+
+pub fn dotenv(allocator: Allocator) EnvMap {
+    _ = allocator;
 }
 
 test "parse happy path" {

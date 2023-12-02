@@ -89,7 +89,7 @@ pub fn dotenvconf(allocator: Allocator, conf: anytype) !EnvMap {
 }
 
 pub fn dotenv(allocator: Allocator) EnvMap {
-    _ = allocator;
+    return dotenvconf(allocator, DefaultConfig{});
 }
 
 test "parse happy path" {

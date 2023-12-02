@@ -41,11 +41,49 @@ fn readFile(allocator: Allocator, path: []const u8) ![]const u8 {
     return try reader.readAllAlloc(allocator, fsz);
 }
 
-const Config = struct {};
+const DefaultConfig = struct {
+    path: []const u8 = ".env",
+    override: bool = false,
+    trim: bool = true,
+};
 
-pub fn dotenvconf(allocator: Allocator, conf: anyopaque) EnvMap {
-    _ = conf;
+pub fn dotenvconf(allocator: Allocator, conf: anytype) !EnvMap {
+    comptime {
+        const tp = @TypeOf(conf);
+        switch (@typeInfo(tp)) {
+            .Struct => |struct_info| {
+                for (struct_info.fields) |field| {
+                    if (!@hasField(DefaultConfig, field.name)) {
+                        @compileError(
+                            \\dotenv conf supports fields:\n
+                            \\path: []const u8 (".env")\n
+                            \\override: bool (false)\n
+                            \\trim: bool (true)\n\n
+                        );
+                    }
+                }
+            },
+            else => @compileError("dotenv expects a struct for conf argument\n"),
+        }
+    }
+    var config = DefaultConfig{};
+    if (@hasField(@TypeOf(conf), "path")) {
+        config.path = conf.path;
+    }
+    if (@hasField(@TypeOf(conf), "override")) {
+        config.override = conf.override;
+    }
+    if (@hasField(@TypeOf(conf), "trim")) {
+        config.trim = conf.trim;
+    }
+
+    const env = try readFile(allocator, config.path);
+    defer allocator.free(env);
+
     var map = EnvMap.init(allocator);
+    errdefer env.deinit();
+
+    parse(env, map, config.override);
 
     return map;
 }

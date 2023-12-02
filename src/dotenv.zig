@@ -10,7 +10,8 @@ inline fn next(bytes: []const u8, delimiter: u8) []const u8 {
 
 fn parse(bytes: []const u8, env: *EnvMap, override: bool) !void {
     var cursor: usize = 0;
-    while (cursor < bytes.len - 1) {
+
+    while (cursor < bytes.len) {
         const next_line = next(bytes[cursor..], '\n');
         cursor += next_line.len + 1;
         const line = trim(next_line);
@@ -19,10 +20,10 @@ fn parse(bytes: []const u8, env: *EnvMap, override: bool) !void {
             continue;
         }
 
-        const key = next(line, '=');
+        const key = trim(next(line, '='));
         var value: []const u8 = "";
         if (line.len > key.len) {
-            value = next(line[key.len + 1 ..], '\n');
+            value = trim(next(line[key.len + 1 ..], '\n'));
         }
 
         if (!env.hash_map.contains(key) or override) {
@@ -41,55 +42,25 @@ fn readFile(allocator: Allocator, path: []const u8) ![]const u8 {
     return try reader.readAllAlloc(allocator, fsz);
 }
 
-const DefaultConfig = struct {
+pub const DotenvConf = struct {
     path: []const u8 = ".env",
     override: bool = false,
-    trim: bool = true,
 };
 
-pub fn dotenvconf(allocator: Allocator, conf: anytype) !EnvMap {
-    comptime {
-        const tp = @TypeOf(conf);
-        switch (@typeInfo(tp)) {
-            .Struct => |struct_info| {
-                for (struct_info.fields) |field| {
-                    if (!@hasField(DefaultConfig, field.name)) {
-                        @compileError(
-                            \\dotenv conf supports fields:\n
-                            \\path: []const u8 (".env")\n
-                            \\override: bool (false)\n
-                            \\trim: bool (true)\n\n
-                        );
-                    }
-                }
-            },
-            else => @compileError("dotenv expects a struct for conf argument\n"),
-        }
-    }
-    var config = DefaultConfig{};
-    if (@hasField(@TypeOf(conf), "path")) {
-        config.path = conf.path;
-    }
-    if (@hasField(@TypeOf(conf), "override")) {
-        config.override = conf.override;
-    }
-    if (@hasField(@TypeOf(conf), "trim")) {
-        config.trim = conf.trim;
-    }
-
+pub fn dotenvconf(allocator: Allocator, config: DotenvConf) !EnvMap {
     const env = try readFile(allocator, config.path);
     defer allocator.free(env);
 
     var map = EnvMap.init(allocator);
-    errdefer env.deinit();
+    errdefer map.deinit();
 
-    parse(env, map, config.override);
+    try parse(env, &map, config.override);
 
     return map;
 }
 
-pub fn dotenv(allocator: Allocator) EnvMap {
-    return dotenvconf(allocator, DefaultConfig{});
+pub fn dotenv(allocator: Allocator) !EnvMap {
+    return try dotenvconf(allocator, DotenvConf{});
 }
 
 test "parse happy path" {
@@ -163,4 +134,26 @@ test "parse line without value" {
     try std.testing.expect(envmap.hash_map.contains("vart"));
     try std.testing.expectEqualStrings(envmap.get("test").?, "");
     try std.testing.expectEqualStrings(envmap.get("vart").?, "test");
+}
+
+test "dotenv default test file" {
+    var envmap = try dotenv(std.testing.allocator);
+    defer envmap.deinit();
+
+    try std.testing.expect(envmap.hash_map.contains("test"));
+    try std.testing.expect(envmap.hash_map.contains("file"));
+    try std.testing.expectEqualStrings(envmap.get("test").?, "file");
+    try std.testing.expectEqualStrings(envmap.get("file").?, "test");
+}
+
+test "dotenvconf set override" {
+    var envmap = try dotenvconf(std.testing.allocator, DotenvConf{
+        .override = false,
+    });
+    defer envmap.deinit();
+
+    try std.testing.expect(envmap.hash_map.contains("test"));
+    try std.testing.expect(envmap.hash_map.contains("file"));
+    try std.testing.expectEqualStrings(envmap.get("test").?, "file");
+    try std.testing.expectEqualStrings(envmap.get("file").?, "test");
 }

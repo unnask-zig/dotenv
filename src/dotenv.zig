@@ -47,7 +47,7 @@ pub const DotenvConf = struct {
     override: bool = false,
 };
 
-pub fn dotenvconf(allocator: Allocator, config: DotenvConf) !EnvMap {
+pub fn dotenvConf(allocator: Allocator, config: DotenvConf) !EnvMap {
     const env = try readFile(allocator, config.path);
     defer allocator.free(env);
 
@@ -60,7 +60,7 @@ pub fn dotenvconf(allocator: Allocator, config: DotenvConf) !EnvMap {
 }
 
 pub fn dotenv(allocator: Allocator) !EnvMap {
-    return try dotenvconf(allocator, DotenvConf{});
+    return try dotenvConf(allocator, DotenvConf{});
 }
 
 test "parse happy path" {
@@ -147,7 +147,7 @@ test "dotenv default test file" {
 }
 
 test "dotenvconf set override" {
-    var envmap = try dotenvconf(std.testing.allocator, DotenvConf{
+    var envmap = try dotenvConf(std.testing.allocator, DotenvConf{
         .override = false,
     });
     defer envmap.deinit();

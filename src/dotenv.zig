@@ -8,6 +8,12 @@ inline fn next(bytes: []const u8, delimiter: u8) []const u8 {
     return bytes[0..pos];
 }
 
+/// parse accepts a string containing the whole environment file, a
+/// std.process.EnvMap and a boolean of whether to override the EnvMap
+/// values with those found in the environment file.
+/// the EnvMap will be updated with key/value pairs from the environment
+/// file.
+/// the user maintains all memory ownership.
 fn parse(bytes: []const u8, env: *EnvMap, override: bool) !void {
     var cursor: usize = 0;
 
@@ -32,6 +38,8 @@ fn parse(bytes: []const u8, env: *EnvMap, override: bool) !void {
     }
 }
 
+/// readfile will read the entire file into an allocted buffer.
+/// the user owns the returned buffer
 fn readFile(allocator: Allocator, path: []const u8) ![]const u8 {
     var file = try std.fs.cwd().openFile(path, .{});
     defer file.close();
@@ -42,13 +50,25 @@ fn readFile(allocator: Allocator, path: []const u8) ![]const u8 {
     return try reader.readAllAlloc(allocator, fsz);
 }
 
+/// Configuration options for dotenv
 pub const DotenvConf = struct {
     path: []const u8 = ".env",
     override: bool = false,
 };
 
+/// dotenvConf runs dotenv with the users passed in configuration options
+/// returning a std.process.EnvMap containing key/value pairs from the
+/// environment as well as the .env file (if it exists).
+/// DotenfConf
+///     .path default is ".env"
+///     .override default is false
+///
+/// Set override to true if you wish to have the environment file values
+/// override values from the environment. (Note that doing so should be
+/// generally frowned upon as this poses substantial risk to accidentally
+/// setting a value inappropriately.)
 pub fn dotenvConf(allocator: Allocator, config: DotenvConf) !EnvMap {
-    const env = try readFile(allocator, config.path);
+    const env = readFile(allocator, config.path) catch "";
     defer allocator.free(env);
 
     var map = EnvMap.init(allocator);
@@ -59,6 +79,12 @@ pub fn dotenvConf(allocator: Allocator, config: DotenvConf) !EnvMap {
     return map;
 }
 
+/// dotenv runs dotenv with the default configuration options
+/// returning a std.process.EnvMap containing key/value pairs from the
+/// environment as well as the .env file (if it exists).
+/// DotenfConf
+///     .path default is ".env"
+///     .override default is false
 pub fn dotenv(allocator: Allocator) !EnvMap {
     return try dotenvConf(allocator, DotenvConf{});
 }

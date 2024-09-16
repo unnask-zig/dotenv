@@ -30,11 +30,12 @@ pub fn build(b: *std.Build) void {
     });
 
     const module = b.addModule("dotenv", .{
-        .source_file = .{ .path = "src/dotenv.zig" },
-        .dependencies = &.{
-            .{ .name = "trimstr", .module = trimstr_dep.module("trimstr") },
-        },
+        .root_source_file = b.path("src/dotenv.zig"),
+        //.dependencies = &.{
+        //    .{ .name = "trimstr", .module = trimstr_dep.module("trimstr") },
+        //},
     });
+    module.addImport("trimstr", trimstr_dep.module("trimstr"));
 
     // This declares intent for the library to be installed into the standard
     // location when the user invokes the "install" step (the default step when
@@ -44,14 +45,16 @@ pub fn build(b: *std.Build) void {
     // Creates a step for unit testing. This only builds the test executable
     // but does not run it.
     const main_tests = b.addTest(.{
-        .root_source_file = .{ .path = "src/tests.zig" },
+        .root_source_file = b.path("src/tests.zig"),
         .target = target,
         .optimize = optimize,
     });
-    var dep_iter = module.dependencies.iterator();
-    while (dep_iter.next()) |e| {
-        main_tests.addModule(e.key_ptr.*, e.value_ptr.*);
-    }
+    main_tests.root_module.addImport("trimstr", trimstr_dep.module("trimstr"));
+
+    //var dep_iter = module.dependencies.iterator();
+    //while (dep_iter.next()) |e| {
+    //    main_tests.addModule(e.key_ptr.*, e.value_ptr.*);
+    //}
     //main_tests.addModule("trimstr", trimstr_dep.module("trimstr"));
 
     const run_main_tests = b.addRunArtifact(main_tests);

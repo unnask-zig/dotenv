@@ -1,10 +1,11 @@
 .{
     .name = "dotenv",
-    .version = "0.0.0",
+    .version = "0.0.1",
     .dependencies = .{
         .trimstr = .{
-            .url = "https://github.com/unnask-zig/trimstr/archive/refs/tags/0.0.2.tar.gz",
-            .hash = "1220b2c76107c7df8986295cf16ac295899ec309d4d6ddd75eef952fafaae5769e48",
+            .url = "https://github.com/unnask-zig/trimstr/archive/refs/tags/0.0.3.tar.gz",
+            .hash = "122060bfa323cff4f262ec0fce1b6714cd1fa8d3ba86fe3d851debc712b545ea2bf6",
         },
     },
+    .paths = .{""},
 }

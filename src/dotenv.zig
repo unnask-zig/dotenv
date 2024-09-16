@@ -44,7 +44,7 @@ fn readFile(allocator: Allocator, path: []const u8) ![]const u8 {
     var file = try std.fs.cwd().openFile(path, .{});
     defer file.close();
 
-    var fsz = (try file.stat()).size;
+    const fsz = (try file.stat()).size;
     var br = std.io.bufferedReader(file.reader());
     var reader = br.reader();
     return try reader.readAllAlloc(allocator, fsz);
@@ -93,7 +93,7 @@ test "parse happy path" {
     var envmap = EnvMap.init(std.testing.allocator);
     defer envmap.deinit();
 
-    var bytes =
+    const bytes =
         \\test=var1
         \\vart=test1
     ;
@@ -111,7 +111,7 @@ test "parse empty lines" {
     var envmap = EnvMap.init(std.testing.allocator);
     defer envmap.deinit();
 
-    var bytes =
+    const bytes =
         \\test=var1
         \\
         \\vart=test
@@ -130,7 +130,7 @@ test "parse empty line w/ whitespace" {
     var envmap = EnvMap.init(std.testing.allocator);
     defer envmap.deinit();
 
-    var bytes =
+    const bytes =
         \\test=var1
         \\  
         \\vart=test
@@ -149,7 +149,7 @@ test "parse line without value" {
     var envmap = EnvMap.init(std.testing.allocator);
     defer envmap.deinit();
 
-    var bytes =
+    const bytes =
         \\test
         \\
         \\vart=test
